@@ -23,6 +23,7 @@ import {
   Smile,
   Table,
   TextQuote,
+  Video,
 } from "lucide-react";
 // constants
 import { COLORS_LIST } from "@/constants/common";
@@ -37,6 +38,7 @@ import {
   toggleTextColor,
   toggleBackgroundColor,
   insertImage,
+  insertVideo,
   insertCallout,
   setText,
   openEmojiPicker,
@@ -299,6 +301,21 @@ export const getSlashCommandFilteredSections =
         command: ({ editor, range }: CommandProps) => insertImage({ editor, event: "insert", range }),
         section: "general",
         pushAfter: "code",
+      });
+    }
+    if (!disabledExtensions?.includes("image")) {
+      internalAdditionalOptions.push({
+        // reuse the "image" command key (TEditorCommands is intentionally not extended for video);
+        // the unique `key` below keeps this slash item distinct
+        commandKey: "image",
+        key: "video",
+        title: "Video",
+        icon: <Video className="size-3.5" />,
+        description: "Insert a video",
+        searchTerms: ["video", "clip", "movie", "media", "mp4", "upload"],
+        command: ({ editor, range }: CommandProps) => insertVideo({ editor, event: "insert", range }),
+        section: "general",
+        pushAfter: "image",
       });
     }
 
