@@ -75,6 +75,8 @@ CUSTOM_TAGS = {
     "label",
     "input",
     "image-component",
+    # inline video (custom fork feature)
+    "video-component",
 }
 ALLOWED_TAGS = nh3.ALLOWED_TAGS | CUSTOM_TAGS
 
@@ -134,6 +136,14 @@ ATTRIBUTES = {
         "title",
     },
     "mention-component": {"id", "entity_identifier", "entity_name"},
+    # inline video (custom fork feature)
+    "video-component": {
+        "id",
+        "src",
+        "width",
+        "height",
+        "status",
+    },
     "th": {
         "colspan",
         "rowspan",
