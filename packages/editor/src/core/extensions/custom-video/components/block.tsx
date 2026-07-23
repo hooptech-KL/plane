@@ -273,7 +273,7 @@ export function CustomVideoBlock(props: CustomVideoBlockProps) {
           onLoadedMetadata={handleVideoLoad}
           onError={handleVideoError}
           onMouseDown={(e) => e.stopPropagation()}
-          className={cn("block max-w-full rounded-md", {
+          className={cn("video-component block max-w-full rounded-md", {
             hidden: showVideoLoader,
             "read-only-video": !editor.isEditable,
             "opacity-80 blur-sm": !resolvedVideoSrc,
