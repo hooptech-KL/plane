@@ -27,7 +27,7 @@ type Props = {
 export function CustomVideoExtension(props: Props) {
   const { fileHandler, isEditable } = props;
   // derived values
-  const { getAssetSrc, restore: restoreVideoFn } = fileHandler;
+  const { getAssetSrc, getAssetDownloadSrc, restore: restoreVideoFn } = fileHandler;
 
   return CustomVideoExtensionConfig.extend<CustomVideoExtensionOptions, CustomVideoExtensionStorage>({
     selectable: isEditable,
@@ -37,6 +37,7 @@ export function CustomVideoExtension(props: Props) {
       const upload = "upload" in fileHandler ? fileHandler.upload : undefined;
       return {
         ...this.parent?.(),
+        getVideoDownloadSource: getAssetDownloadSrc,
         getVideoSource: getAssetSrc,
         restoreVideo: restoreVideoFn,
         uploadVideo: upload,

@@ -27,10 +27,19 @@ export function CustomVideoNodeView(props: CustomVideoNodeViewProps) {
 
   const [isUploaded, setIsUploaded] = useState(!!videoNodeSrc);
   const [resolvedSrc, setResolvedSrc] = useState<string | undefined>(undefined);
+  const [resolvedDownloadSrc, setResolvedDownloadSrc] = useState<string | undefined>(undefined);
   const [videoFromFileSystem, setVideoFromFileSystem] = useState<string | undefined>(undefined);
   const [failedToLoadVideo, setFailedToLoadVideo] = useState(false);
 
+  const [editorContainer, setEditorContainer] = useState<HTMLDivElement | null>(null);
   const videoComponentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const closestEditorContainer = videoComponentRef.current?.closest(".editor-container");
+    if (closestEditorContainer) {
+      setEditorContainer(closestEditorContainer as HTMLDivElement);
+    }
+  }, []);
 
   // the video is already uploaded if the video-component node has a src attribute
   // and we need to drop the blob preview from our file system
@@ -46,10 +55,12 @@ export function CustomVideoNodeView(props: CustomVideoNodeViewProps) {
   useEffect(() => {
     if (!videoNodeSrc) {
       setResolvedSrc(undefined);
+      setResolvedDownloadSrc(undefined);
       return;
     }
 
     setResolvedSrc(undefined);
+    setResolvedDownloadSrc(undefined);
     // reset the failed state whenever the source changes
     setFailedToLoadVideo(false);
 
@@ -57,6 +68,8 @@ export function CustomVideoNodeView(props: CustomVideoNodeViewProps) {
       try {
         const url = await extension.options.getVideoSource?.(videoNodeSrc);
         setResolvedSrc(url);
+        const downloadUrl = await extension.options.getVideoDownloadSource?.(videoNodeSrc);
+        setResolvedDownloadSrc(downloadUrl);
       } catch (error) {
         console.error("Error fetching video source:", error);
         setFailedToLoadVideo(true);
@@ -64,7 +77,7 @@ export function CustomVideoNodeView(props: CustomVideoNodeViewProps) {
     };
     void getVideoSource();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoNodeSrc, extension.options.getVideoSource]);
+  }, [videoNodeSrc, extension.options.getVideoSource, extension.options.getVideoDownloadSource]);
 
   const maxFileSize = (editor.storage.videoComponent as { maxFileSize?: number } | undefined)?.maxFileSize ?? 0;
   const hasValidVideoSource = videoFromFileSystem || (isUploaded && resolvedSrc);
@@ -75,8 +88,11 @@ export function CustomVideoNodeView(props: CustomVideoNodeViewProps) {
       <div className="mx-0 my-2 p-0" data-drag-handle ref={videoComponentRef}>
         {shouldShowBlock ? (
           <CustomVideoBlock
+            editorContainer={editorContainer}
             src={resolvedSrc}
+            downloadSrc={resolvedDownloadSrc}
             videoFromFileSystem={videoFromFileSystem}
+            setEditorContainer={setEditorContainer}
             setFailedToLoadVideo={setFailedToLoadVideo}
             {...props}
           />
