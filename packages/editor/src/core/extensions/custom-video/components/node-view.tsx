@@ -9,7 +9,7 @@ import type { NodeViewProps } from "@tiptap/react";
 import { useEffect, useRef, useState } from "react";
 // local imports
 import type { CustomVideoExtensionType, TCustomVideoAttributes } from "../types";
-import { ECustomVideoAttributeNames } from "../types";
+import { ECustomVideoAttributeNames, ECustomVideoStatus } from "../types";
 import { CustomVideoBlock } from "./block";
 import { CustomVideoUploader } from "./uploader";
 
@@ -23,12 +23,10 @@ export type CustomVideoNodeViewProps = Omit<NodeViewProps, "extension" | "update
 
 export function CustomVideoNodeView(props: CustomVideoNodeViewProps) {
   const { editor, extension, node } = props;
-  const { src: videoNodeSrc } = node.attrs;
+  const { src: videoNodeSrc, status } = node.attrs;
 
-  const [isUploaded, setIsUploaded] = useState(!!videoNodeSrc);
   const [resolvedSrc, setResolvedSrc] = useState<string | undefined>(undefined);
   const [resolvedDownloadSrc, setResolvedDownloadSrc] = useState<string | undefined>(undefined);
-  const [videoFromFileSystem, setVideoFromFileSystem] = useState<string | undefined>(undefined);
   const [failedToLoadVideo, setFailedToLoadVideo] = useState(false);
 
   const [editorContainer, setEditorContainer] = useState<HTMLDivElement | null>(null);
@@ -40,17 +38,6 @@ export function CustomVideoNodeView(props: CustomVideoNodeViewProps) {
       setEditorContainer(closestEditorContainer as HTMLDivElement);
     }
   }, []);
-
-  // the video is already uploaded if the video-component node has a src attribute
-  // and we need to drop the blob preview from our file system
-  useEffect(() => {
-    if (resolvedSrc || videoNodeSrc) {
-      setIsUploaded(true);
-      setVideoFromFileSystem(undefined);
-    } else {
-      setIsUploaded(false);
-    }
-  }, [resolvedSrc, videoNodeSrc]);
 
   useEffect(() => {
     if (!videoNodeSrc) {
@@ -80,8 +67,11 @@ export function CustomVideoNodeView(props: CustomVideoNodeViewProps) {
   }, [videoNodeSrc, extension.options.getVideoSource, extension.options.getVideoDownloadSource]);
 
   const maxFileSize = (editor.storage.videoComponent as { maxFileSize?: number } | undefined)?.maxFileSize ?? 0;
-  const hasValidVideoSource = videoFromFileSystem || (isUploaded && resolvedSrc);
-  const shouldShowBlock = hasValidVideoSource && !failedToLoadVideo;
+  // Only mount the real <video> once the asset is fully uploaded AND its src is
+  // resolved. This guarantees the <video onError> handler can never fire (and
+  // flash "Error…") while an upload is still in flight.
+  const isUploaded = status === ECustomVideoStatus.UPLOADED || !!videoNodeSrc;
+  const shouldShowBlock = isUploaded && !!resolvedSrc && !failedToLoadVideo;
 
   return (
     <NodeViewWrapper key={node.attrs[ECustomVideoAttributeNames.ID]}>
@@ -91,20 +81,13 @@ export function CustomVideoNodeView(props: CustomVideoNodeViewProps) {
             editorContainer={editorContainer}
             src={resolvedSrc}
             downloadSrc={resolvedDownloadSrc}
-            videoFromFileSystem={videoFromFileSystem}
+            videoFromFileSystem={undefined}
             setEditorContainer={setEditorContainer}
             setFailedToLoadVideo={setFailedToLoadVideo}
             {...props}
           />
         ) : (
-          <CustomVideoUploader
-            failedToLoadVideo={failedToLoadVideo}
-            loadVideoFromFileSystem={setVideoFromFileSystem}
-            maxFileSize={maxFileSize}
-            resolvedSrc={resolvedSrc}
-            setIsUploaded={setIsUploaded}
-            {...props}
-          />
+          <CustomVideoUploader failedToLoadVideo={failedToLoadVideo} maxFileSize={maxFileSize} {...props} />
         )}
       </div>
     </NodeViewWrapper>

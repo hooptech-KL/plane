@@ -3,6 +3,7 @@
 # See the LICENSE file for details.
 
 # Python imports
+import math
 import uuid
 
 # Django imports
@@ -25,6 +26,96 @@ from plane.utils.cache import invalidate_cache_directly
 from plane.utils.path_validator import sanitize_filename
 from plane.bgtasks.storage_metadata_task import get_asset_object_metadata
 from plane.throttles.asset import AssetRateThrottle
+
+
+# Uploads above this size are routed through S3 multipart so each part stays
+# under Cloudflare's 100MB request-body cap. Also triggered by `multipart: true`.
+MULTIPART_THRESHOLD = 90 * 1024 * 1024
+# Size of each multipart part (well under the Cloudflare 100MB cap).
+MULTIPART_PART_SIZE = 50 * 1024 * 1024
+
+
+def wants_multipart(request, size_limit):
+    """Decide whether to route an editor upload through S3 multipart."""
+    requested = str(request.data.get("multipart", "")).lower() in ("1", "true", "yes")
+    return requested or size_limit > MULTIPART_THRESHOLD
+
+
+def build_multipart_response(request, asset, asset_key, file_type, size_limit):
+    """Initiate a multipart upload and build the presigned-part response payload.
+
+    Returns (response_dict, error_response). On success error_response is None.
+    """
+    storage = S3Storage(request=request)
+    upload_id = storage.create_multipart_upload(object_name=asset_key, file_type=file_type)
+    if not upload_id:
+        return None, Response(
+            {"error": "Could not initiate multipart upload.", "status": False},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    part_count = max(1, math.ceil(size_limit / MULTIPART_PART_SIZE))
+    parts = storage.generate_presigned_part_urls(
+        object_name=asset_key, upload_id=upload_id, part_count=part_count
+    )
+    if parts is None:
+        storage.abort_multipart_upload(object_name=asset_key, upload_id=upload_id)
+        return None, Response(
+            {"error": "Could not generate multipart upload URLs.", "status": False},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    return {
+        "multipart": True,
+        "asset_id": str(asset.id),
+        "asset_url": asset.asset_url,
+        "upload_id": upload_id,
+        "key": asset_key,
+        "part_size": MULTIPART_PART_SIZE,
+        "parts": parts,
+    }, None
+
+
+def finalize_multipart_upload(request, asset):
+    """Complete a multipart upload for an asset and mark it uploaded.
+
+    Mirrors the single-POST "mark uploaded" flow. Returns a DRF Response.
+    """
+    upload_id = request.data.get("upload_id")
+    parts = request.data.get("parts", [])
+    if not upload_id or not parts:
+        return Response(
+            {"error": "upload_id and parts are required.", "status": False},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # normalize + sort the parts for S3
+    try:
+        s3_parts = sorted(
+            ({"PartNumber": int(p["part_number"]), "ETag": p["etag"]} for p in parts),
+            key=lambda p: p["PartNumber"],
+        )
+    except (KeyError, TypeError, ValueError):
+        return Response(
+            {"error": "Invalid parts payload.", "status": False},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    storage = S3Storage(request=request)
+    result = storage.complete_multipart_upload(object_name=asset.asset, upload_id=upload_id, parts=s3_parts)
+    if result is None:
+        storage.abort_multipart_upload(object_name=asset.asset, upload_id=upload_id)
+        return Response(
+            {"error": "Could not complete multipart upload.", "status": False},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # mark uploaded (mirror the single-POST PATCH flow)
+    asset.is_uploaded = True
+    if not asset.storage_metadata:
+        get_asset_object_metadata.delay(asset_id=str(asset.id))
+    asset.save(update_fields=["is_uploaded"])
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class UserAssetsV2Endpoint(BaseAPIView):
@@ -371,6 +462,20 @@ class WorkspaceFileAssetEndpoint(BaseAPIView):
             **self.get_entity_id_field(entity_type=entity_type, entity_id=entity_identifier),
         )
 
+        # Large uploads use S3 multipart so parts clear the Cloudflare 100MB cap
+        if wants_multipart(request, size_limit):
+            multipart_response, error_response = build_multipart_response(
+                request=request,
+                asset=asset,
+                asset_key=asset_key,
+                file_type=type,
+                size_limit=size_limit,
+            )
+            if error_response is not None:
+                asset.delete()
+                return error_response
+            return Response(multipart_response, status=status.HTTP_200_OK)
+
         # Get the presigned URL
         storage = S3Storage(request=request)
         # Generate a presigned URL to share an S3 object
@@ -580,6 +685,20 @@ class ProjectAssetEndpoint(BaseAPIView):
             project_id=project_id,
             **self.get_entity_id_field(entity_type, entity_identifier),
         )
+
+        # Large uploads use S3 multipart so parts clear the Cloudflare 100MB cap
+        if wants_multipart(request, size_limit):
+            multipart_response, error_response = build_multipart_response(
+                request=request,
+                asset=asset,
+                asset_key=asset_key,
+                file_type=type,
+                size_limit=size_limit,
+            )
+            if error_response is not None:
+                asset.delete()
+                return error_response
+            return Response(multipart_response, status=status.HTTP_200_OK)
 
         # Get the presigned URL
         storage = S3Storage(request=request)
@@ -862,3 +981,21 @@ class ProjectAssetDownloadEndpoint(BaseAPIView):
         )
 
         return HttpResponseRedirect(signed_url)
+
+
+class WorkspaceAssetMultipartCompleteEndpoint(BaseAPIView):
+    """Complete a workspace-level S3 multipart upload and mark the asset uploaded."""
+
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST], level="WORKSPACE")
+    def post(self, request, slug, asset_id):
+        asset = FileAsset.objects.get(id=asset_id, workspace__slug=slug)
+        return finalize_multipart_upload(request=request, asset=asset)
+
+
+class ProjectAssetMultipartCompleteEndpoint(BaseAPIView):
+    """Complete a project-level S3 multipart upload and mark the asset uploaded."""
+
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST])
+    def post(self, request, slug, project_id, asset_id):
+        asset = FileAsset.objects.get(id=asset_id, workspace__slug=slug, project_id=project_id)
+        return finalize_multipart_upload(request=request, asset=asset)

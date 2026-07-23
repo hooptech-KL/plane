@@ -14,6 +14,19 @@ import { getAssetIdFromUrl } from "@plane/utils";
 // services
 import { APIService } from "@/services/api.service";
 import { FileUploadService } from "@/services/file-upload.service";
+import type { TMultipartUploadPart } from "@/services/file-upload.service";
+
+// Multipart variant of the signed-URL response (large uploads routed through
+// S3 multipart to clear the Cloudflare 100MB request-body cap).
+type TMultipartUploadResponse = {
+  multipart: true;
+  asset_id: string;
+  asset_url: string;
+  upload_id: string;
+  key: string;
+  part_size: number;
+  parts: TMultipartUploadPart[];
+};
 
 export interface UnSplashImage {
   id: string;
@@ -69,6 +82,18 @@ export class FileService extends APIService {
       });
   }
 
+  private async completeWorkspaceMultipartUpload(
+    workspaceSlug: string,
+    assetId: string,
+    data: { upload_id: string; parts: { part_number: number; etag: string }[] }
+  ): Promise<void> {
+    return this.post(`/api/assets/v2/workspaces/${workspaceSlug}/${assetId}/complete/`, data)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
   async uploadWorkspaceAsset(
     workspaceSlug: string,
     data: TFileEntityInfo,
@@ -81,15 +106,26 @@ export class FileService extends APIService {
       ...fileMetaData,
     })
       .then(async (response) => {
-        const signedURLResponse: TFileSignedURLResponse = response?.data;
-        const fileUploadPayload = generateFileUploadPayload(signedURLResponse, file);
-        await this.fileUploadService.uploadFile(
-          signedURLResponse.upload_data.url,
-          fileUploadPayload,
-          uploadProgressHandler
-        );
-        await this.updateWorkspaceAssetUploadStatus(workspaceSlug.toString(), signedURLResponse.asset_id);
-        return signedURLResponse;
+        const responseData = response?.data as TFileSignedURLResponse & Partial<TMultipartUploadResponse>;
+        // multipart path (large uploads)
+        if (responseData.multipart && responseData.parts && responseData.upload_id) {
+          const uploadedParts = await this.fileUploadService.uploadMultipart(
+            responseData.parts,
+            file,
+            responseData.part_size ?? 0,
+            uploadProgressHandler
+          );
+          await this.completeWorkspaceMultipartUpload(workspaceSlug.toString(), responseData.asset_id, {
+            upload_id: responseData.upload_id,
+            parts: uploadedParts,
+          });
+          return responseData as unknown as TFileSignedURLResponse;
+        }
+        // single presigned POST path
+        const fileUploadPayload = generateFileUploadPayload(responseData, file);
+        await this.fileUploadService.uploadFile(responseData.upload_data.url, fileUploadPayload, uploadProgressHandler);
+        await this.updateWorkspaceAssetUploadStatus(workspaceSlug.toString(), responseData.asset_id);
+        return responseData;
       })
       .catch((error) => {
         throw error?.response?.data;
@@ -110,6 +146,19 @@ export class FileService extends APIService {
     assetId: string
   ): Promise<void> {
     return this.patch(`/api/assets/v2/workspaces/${workspaceSlug}/projects/${projectId}/${assetId}/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  private async completeProjectMultipartUpload(
+    workspaceSlug: string,
+    projectId: string,
+    assetId: string,
+    data: { upload_id: string; parts: { part_number: number; etag: string }[] }
+  ): Promise<void> {
+    return this.post(`/api/assets/v2/workspaces/${workspaceSlug}/projects/${projectId}/${assetId}/complete/`, data)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;
@@ -158,15 +207,26 @@ export class FileService extends APIService {
       ...fileMetaData,
     })
       .then(async (response) => {
-        const signedURLResponse: TFileSignedURLResponse = response?.data;
-        const fileUploadPayload = generateFileUploadPayload(signedURLResponse, file);
-        await this.fileUploadService.uploadFile(
-          signedURLResponse.upload_data.url,
-          fileUploadPayload,
-          uploadProgressHandler
-        );
-        await this.updateProjectAssetUploadStatus(workspaceSlug, projectId, signedURLResponse.asset_id);
-        return signedURLResponse;
+        const responseData = response?.data as TFileSignedURLResponse & Partial<TMultipartUploadResponse>;
+        // multipart path (large uploads)
+        if (responseData.multipart && responseData.parts && responseData.upload_id) {
+          const uploadedParts = await this.fileUploadService.uploadMultipart(
+            responseData.parts,
+            file,
+            responseData.part_size ?? 0,
+            uploadProgressHandler
+          );
+          await this.completeProjectMultipartUpload(workspaceSlug, projectId, responseData.asset_id, {
+            upload_id: responseData.upload_id,
+            parts: uploadedParts,
+          });
+          return responseData as unknown as TFileSignedURLResponse;
+        }
+        // single presigned POST path
+        const fileUploadPayload = generateFileUploadPayload(responseData, file);
+        await this.fileUploadService.uploadFile(responseData.upload_data.url, fileUploadPayload, uploadProgressHandler);
+        await this.updateProjectAssetUploadStatus(workspaceSlug, projectId, responseData.asset_id);
+        return responseData;
       })
       .catch((error) => {
         throw error?.response?.data;

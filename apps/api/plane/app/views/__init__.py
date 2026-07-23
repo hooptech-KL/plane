@@ -114,6 +114,8 @@ from .asset.v2 import (
     DuplicateAssetEndpoint,
     WorkspaceAssetDownloadEndpoint,
     ProjectAssetDownloadEndpoint,
+    WorkspaceAssetMultipartCompleteEndpoint,
+    ProjectAssetMultipartCompleteEndpoint,
 )
 from .issue.base import (
     IssueListEndpoint,

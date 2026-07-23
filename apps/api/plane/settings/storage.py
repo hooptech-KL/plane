@@ -139,6 +139,73 @@ class S3Storage(S3Boto3Storage):
         # The response contains the presigned URL
         return response
 
+    def create_multipart_upload(self, object_name, file_type):
+        """Initiate an S3 multipart upload and return the UploadId"""
+        try:
+            response = self.s3_client.create_multipart_upload(
+                Bucket=self.aws_storage_bucket_name,
+                Key=object_name,
+                ContentType=file_type,
+            )
+        except ClientError as e:
+            log_exception(e)
+            return None
+
+        return response.get("UploadId")
+
+    def generate_presigned_part_urls(self, object_name, upload_id, part_count, expiration=None):
+        """Generate a presigned URL for each part of a multipart upload"""
+        if expiration is None:
+            expiration = self.signed_url_expiration
+        try:
+            urls = []
+            for part_number in range(1, part_count + 1):
+                url = self.s3_client.generate_presigned_url(
+                    "upload_part",
+                    Params={
+                        "Bucket": self.aws_storage_bucket_name,
+                        "Key": object_name,
+                        "UploadId": upload_id,
+                        "PartNumber": part_number,
+                    },
+                    ExpiresIn=expiration,
+                    HttpMethod="PUT",
+                )
+                urls.append({"part_number": part_number, "url": url})
+        except ClientError as e:
+            log_exception(e)
+            return None
+
+        return urls
+
+    def complete_multipart_upload(self, object_name, upload_id, parts):
+        """Complete a multipart upload. parts=[{"PartNumber": n, "ETag": e}, ...]"""
+        try:
+            response = self.s3_client.complete_multipart_upload(
+                Bucket=self.aws_storage_bucket_name,
+                Key=object_name,
+                UploadId=upload_id,
+                MultipartUpload={"Parts": parts},
+            )
+        except ClientError as e:
+            log_exception(e)
+            return None
+
+        return response
+
+    def abort_multipart_upload(self, object_name, upload_id):
+        """Abort a multipart upload, discarding any uploaded parts"""
+        try:
+            self.s3_client.abort_multipart_upload(
+                Bucket=self.aws_storage_bucket_name,
+                Key=object_name,
+                UploadId=upload_id,
+            )
+            return True
+        except ClientError as e:
+            log_exception(e)
+            return False
+
     def get_object_metadata(self, object_name):
         """Get the metadata for an S3 object"""
         try:

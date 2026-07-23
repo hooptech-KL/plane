@@ -20,6 +20,8 @@ from plane.app.views import (
     DuplicateAssetEndpoint,
     WorkspaceAssetDownloadEndpoint,
     ProjectAssetDownloadEndpoint,
+    WorkspaceAssetMultipartCompleteEndpoint,
+    ProjectAssetMultipartCompleteEndpoint,
 )
 
 
@@ -57,6 +59,11 @@ urlpatterns = [
         name="workspace-file-assets",
     ),
     path(
+        "assets/v2/workspaces/<str:slug>/<uuid:asset_id>/complete/",
+        WorkspaceAssetMultipartCompleteEndpoint.as_view(),
+        name="workspace-asset-multipart-complete",
+    ),
+    path(
         "assets/v2/user-assets/",
         UserAssetsV2Endpoint.as_view(),
         name="user-file-assets",
@@ -85,6 +92,11 @@ urlpatterns = [
         "assets/v2/workspaces/<str:slug>/projects/<uuid:project_id>/<uuid:pk>/",
         ProjectAssetEndpoint.as_view(),
         name="bulk-asset-update",
+    ),
+    path(
+        "assets/v2/workspaces/<str:slug>/projects/<uuid:project_id>/<uuid:asset_id>/complete/",
+        ProjectAssetMultipartCompleteEndpoint.as_view(),
+        name="project-asset-multipart-complete",
     ),
     path(
         "assets/v2/workspaces/<str:slug>/projects/<uuid:project_id>/<uuid:entity_id>/bulk/",

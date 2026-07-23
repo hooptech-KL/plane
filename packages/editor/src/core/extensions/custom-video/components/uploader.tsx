@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { useEditorState } from "@tiptap/react";
 import { Video } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -20,62 +21,46 @@ import type { CustomVideoNodeViewProps } from "./node-view";
 
 type CustomVideoUploaderProps = CustomVideoNodeViewProps & {
   failedToLoadVideo: boolean;
-  loadVideoFromFileSystem: (url: string | undefined) => void;
   maxFileSize: number;
-  resolvedSrc: string | undefined;
-  setIsUploaded: (isUploaded: boolean) => void;
+};
+
+const formatMaxSize = (bytes: number): string => {
+  if (!bytes) return "";
+  const mb = bytes / (1024 * 1024);
+  if (mb >= 1024) {
+    const gb = mb / 1024;
+    return `${Number.isInteger(gb) ? gb : gb.toFixed(1)} GB`;
+  }
+  return `${Math.round(mb)} MB`;
 };
 
 export function CustomVideoUploader(props: CustomVideoUploaderProps) {
-  const {
-    editor,
-    extension,
-    failedToLoadVideo,
-    getPos,
-    loadVideoFromFileSystem,
-    maxFileSize,
-    node,
-    resolvedSrc,
-    selected,
-    setIsUploaded,
-    updateAttributes,
-  } = props;
+  const { editor, extension, failedToLoadVideo, getPos, maxFileSize, node, selected, updateAttributes } = props;
   // refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasTriggeredFilePickerRef = useRef(false);
   const hasTriedUploadingOnMountRef = useRef(false);
-  const objectUrlRef = useRef<string | undefined>(undefined);
   // states
   const [draggedInside, setDraggedInside] = useState(false);
   const [isVideoBeingUploaded, setIsVideoBeingUploaded] = useState(false);
+  const [uploadError, setUploadError] = useState<string | undefined>(undefined);
   // derived values
   const { id: videoEntityId } = node.attrs;
   const videoComponentFileMap = useMemo(() => getVideoComponentFileMap(editor), [editor]);
   const isTouchDevice = !!(editor.storage.utility as { isTouchDevice?: boolean } | undefined)?.isTouchDevice;
+  const maxSizeLabel = formatMaxSize(maxFileSize);
 
-  // revoke the blob preview URL once the real (resolved) src is ready
-  useEffect(() => {
-    if (resolvedSrc && objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = undefined;
-    }
-  }, [resolvedSrc]);
-
-  // revoke any pending blob preview URL on unmount
-  useEffect(
-    () => () => {
-      if (objectUrlRef.current) {
-        URL.revokeObjectURL(objectUrlRef.current);
-        objectUrlRef.current = undefined;
-      }
-    },
-    []
-  );
+  // live upload progress (0-100) surfaced by the host app via the utility storage
+  const uploadProgress = useEditorState({
+    editor,
+    selector: ({ editor: currentEditor }) =>
+      (currentEditor.storage.utility as { assetsUploadStatus?: Record<string, number> } | undefined)
+        ?.assetsUploadStatus?.[videoEntityId ?? ""],
+  });
 
   const onUploadComplete = useCallback(
     (url: string) => {
       if (!url || !videoEntityId) return;
-      setIsUploaded(true);
       // update the node view's src attribute post upload
       updateAttributes({
         src: url,
@@ -103,40 +88,43 @@ export function CustomVideoUploader(props: CustomVideoUploaderProps) {
 
   const uploadFile = useCallback(
     async (file: File) => {
-      // validate the file before doing anything
+      // reject oversized / invalid files early with an inline message
       if (
         !isFileValid({
           acceptedMimeTypes: ACCEPTED_VIDEO_MIME_TYPES,
           file,
           maxFileSize,
-          onError: (_error: EFileError, message: string) => alert(message),
+          onError: (error: EFileError, message: string) => {
+            setUploadError(
+              error === EFileError.FILE_SIZE_TOO_LARGE && maxSizeLabel ? `Video too large (max ${maxSizeLabel})` : message
+            );
+          },
         })
       ) {
         return;
       }
 
+      setUploadError(undefined);
       try {
         setIsVideoBeingUploaded(true);
         (editor.storage.utility as { uploadInProgress?: boolean }).uploadInProgress = true;
         updateAttributes({ status: ECustomVideoStatus.UPLOADING });
-
-        // build a blob-URL preview (data: URLs are unreliable in <video>)
-        const previewUrl = URL.createObjectURL(file);
-        objectUrlRef.current = previewUrl;
-        loadVideoFromFileSystem(previewUrl);
 
         const url = await extension.options.uploadVideo?.(videoEntityId ?? "", file);
         if (url) {
           onUploadComplete(url);
         }
       } catch (error) {
+        // only surface an error when the upload itself actually rejects
         console.error("Error while uploading video:", error);
+        setUploadError("Error uploading video");
+        updateAttributes({ status: ECustomVideoStatus.PENDING });
       } finally {
         setIsVideoBeingUploaded(false);
         (editor.storage.utility as { uploadInProgress?: boolean }).uploadInProgress = false;
       }
     },
-    [editor, extension.options, loadVideoFromFileSystem, maxFileSize, onUploadComplete, updateAttributes, videoEntityId]
+    [editor, extension.options, maxFileSize, maxSizeLabel, onUploadComplete, updateAttributes, videoEntityId]
   );
 
   // after the video component is mounted, start the upload process based on its
@@ -201,7 +189,9 @@ export function CustomVideoUploader(props: CustomVideoUploaderProps) {
     setDraggedInside(false);
   }, []);
 
-  const isErrorState = failedToLoadVideo;
+  const isUploading = isVideoBeingUploaded || uploadProgress !== undefined;
+  // never treat an in-flight upload as an error state
+  const isErrorState = !isUploading && (failedToLoadVideo || !!uploadError);
 
   const borderColor =
     selected && editor.isEditable && !isErrorState
@@ -209,17 +199,20 @@ export function CustomVideoUploader(props: CustomVideoUploaderProps) {
       : undefined;
 
   const getDisplayMessage = useCallback(() => {
-    if (isErrorState) {
-      return "Error loading video";
+    if (isUploading) {
+      return uploadProgress !== undefined ? `Uploading… ${uploadProgress}%` : "Uploading…";
     }
-    if (isVideoBeingUploaded) {
-      return "Uploading...";
+    if (uploadError) {
+      return uploadError;
+    }
+    if (failedToLoadVideo) {
+      return "Error loading video";
     }
     if (draggedInside && editor.isEditable) {
       return "Drop video here";
     }
-    return "Add a video";
-  }, [draggedInside, editor.isEditable, isErrorState, isVideoBeingUploaded]);
+    return maxSizeLabel ? `Add a video (max ${maxSizeLabel})` : "Add a video";
+  }, [draggedInside, editor.isEditable, failedToLoadVideo, isUploading, maxSizeLabel, uploadError, uploadProgress]);
 
   return (
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events
@@ -243,7 +236,8 @@ export function CustomVideoUploader(props: CustomVideoUploaderProps) {
       onDragLeave={onDragLeave}
       contentEditable={false}
       onClick={() => {
-        if (!isErrorState && editor.isEditable) {
+        if (!isUploading && editor.isEditable) {
+          // allow re-picking a file after an error, or picking the first one
           fileInputRef.current?.click();
         }
       }}
