@@ -144,10 +144,10 @@ class S3Storage(S3Boto3Storage):
         try:
             response = self.s3_client.create_multipart_upload(
                 Bucket=self.aws_storage_bucket_name,
-                Key=object_name,
+                Key=str(object_name),
                 ContentType=file_type,
             )
-        except ClientError as e:
+        except Exception as e:
             log_exception(e)
             return None
 
@@ -164,7 +164,7 @@ class S3Storage(S3Boto3Storage):
                     "upload_part",
                     Params={
                         "Bucket": self.aws_storage_bucket_name,
-                        "Key": object_name,
+                        "Key": str(object_name),
                         "UploadId": upload_id,
                         "PartNumber": part_number,
                     },
@@ -172,7 +172,7 @@ class S3Storage(S3Boto3Storage):
                     HttpMethod="PUT",
                 )
                 urls.append({"part_number": part_number, "url": url})
-        except ClientError as e:
+        except Exception as e:
             log_exception(e)
             return None
 
@@ -183,11 +183,11 @@ class S3Storage(S3Boto3Storage):
         try:
             response = self.s3_client.complete_multipart_upload(
                 Bucket=self.aws_storage_bucket_name,
-                Key=object_name,
+                Key=str(object_name),
                 UploadId=upload_id,
                 MultipartUpload={"Parts": parts},
             )
-        except ClientError as e:
+        except Exception as e:
             log_exception(e)
             return None
 
@@ -198,11 +198,11 @@ class S3Storage(S3Boto3Storage):
         try:
             self.s3_client.abort_multipart_upload(
                 Bucket=self.aws_storage_bucket_name,
-                Key=object_name,
+                Key=str(object_name),
                 UploadId=upload_id,
             )
             return True
-        except ClientError as e:
+        except Exception as e:
             log_exception(e)
             return False
 
