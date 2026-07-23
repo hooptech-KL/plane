@@ -136,11 +136,21 @@ def copy_s3_objects_of_description_and_assets(entity_name, entity_identifier, pr
             raise ValueError(f"Unsupported entity_name: {entity_name}")
 
         entity = model_class.objects.get(id=entity_identifier)
-        asset_ids = extract_asset_ids(entity.description_html, "image-component")
+        # Duplicate both inline images and inline videos (custom fork feature).
+        # Both node tags carry the source asset id in their `src` attribute, so
+        # the same extract/copy/replace pipeline works for each tag.
+        asset_tags = ["image-component", "video-component"]
+        asset_ids = []
+        for tag in asset_tags:
+            asset_ids.extend(extract_asset_ids(entity.description_html, tag))
 
         duplicated_assets = copy_assets(entity, entity_identifier, project_id, asset_ids, user_id)
 
-        updated_html = update_description(entity, duplicated_assets, "image-component")
+        updated_html = entity.description_html
+        for tag in asset_tags:
+            updated_html = replace_asset_ids(updated_html, tag, duplicated_assets)
+        entity.description_html = updated_html
+        entity.save()
 
         external_data = sync_with_external_service(entity_name, updated_html)
 
