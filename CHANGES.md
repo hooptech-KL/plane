@@ -7,6 +7,18 @@ a short summary, not a full diff (see git history / linked commits for that).
 All work lands on the `hooptech` branch (renamed from `feat/inline-video-v1`,
 which undersold what's here — inline video was only the first patch).
 
+## Token-authenticated asset endpoints: fix TypeError on every call
+
+`apps/api/plane/settings/storage.py` — `S3Storage.__init__()` only accepted
+`request=None`, but `apps/api/plane/api/views/asset.py` (`UserServerAssetEndpoint`,
+`GenericAssetEndpoint` GET+POST) all called it with `is_server=True`, an
+argument that never existed. Every request to these endpoints — the ones a
+service API token uses to create/download assets — 500'd unconditionally.
+Never caught before because nothing had exercised the token-authenticated
+asset path until an external integration hit it. Fixed by accepting
+`is_server` (stored, currently unused beyond that — no behavior change from
+the working `request=request` path every other call site already uses).
+
 ## Notifications: trailing-slash fix
 
 `apps/web/core/services/workspace-notification.service.ts` — the notifications
