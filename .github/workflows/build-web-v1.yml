@@ -1,7 +1,7 @@
 name: Build Custom Web v1 (inline video)
 on:
   push:
-    branches: [feat/inline-video-v1]
+    branches: [hooptech]
     paths: ["apps/web/**", "packages/**", ".github/workflows/build-web-v1.yml"]
   workflow_dispatch:
 concurrency:

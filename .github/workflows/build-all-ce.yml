@@ -2,7 +2,7 @@ name: Build All CE images (prod cutover)
 
 on:
   push:
-    branches: [feat/inline-video-v1]
+    branches: [hooptech]
     paths:
       - "apps/**"
       - "packages/**"
