@@ -10,6 +10,7 @@ import { observer } from "mobx-react";
 import { cn } from "@plane/utils";
 import { AppRailRoot } from "@/components/navigation";
 import { useAppRailVisibility } from "@/lib/app-rail";
+import useBrowserNotifications from "@/hooks/use-browser-notifications";
 // local imports
 import { TopNavigationRoot } from "../navigations";
 
@@ -20,6 +21,7 @@ export const WorkspaceContentWrapper = observer(function WorkspaceContentWrapper
 }) {
   // Use the context to determine if app rail should render
   const { shouldRenderAppRail } = useAppRailVisibility();
+  useBrowserNotifications();
 
   return (
     <div className="relative flex size-full flex-col overflow-hidden bg-canvas transition-all duration-300 ease-in-out">
