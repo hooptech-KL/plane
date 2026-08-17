@@ -7,6 +7,8 @@ a short summary, not a full diff (see git history / linked commits for that).
 All work lands on the `hooptech` branch (renamed from `feat/inline-video-v1`,
 which undersold what's here — inline video was only the first patch).
 
+## Cycle analytics: fix trailing-slash 404 in `cycle.service.ts` (analytics widget never loaded)
+
 ## Token-authenticated asset endpoints: fix TypeError on every call
 
 `apps/api/plane/settings/storage.py` — `S3Storage.__init__()` only accepted
