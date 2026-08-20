@@ -9,6 +9,8 @@ which undersold what's here — inline video was only the first patch).
 
 ## Work item templates: per-project toggleable module with pre-filled work item defaults
 
+Managed from a Templates section under the project (Settings only carries the on/off toggle).
+
 ## Remove dead build-api-v1.yml CI workflow (pre-CE, unreferenced)
 
 ## Remove dead build-web-v1.yml CI workflow (pre-CE, unreferenced, failing)

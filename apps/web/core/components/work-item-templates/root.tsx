@@ -23,7 +23,7 @@ type Props = {
   projectId: string;
 };
 
-export const WorkItemTemplateSettingsRoot = observer(function WorkItemTemplateSettingsRoot(props: Props) {
+export const WorkItemTemplatesRoot = observer(function WorkItemTemplatesRoot(props: Props) {
   const { workspaceSlug, projectId } = props;
   // states
   const [isFormOpen, setIsFormOpen] = useState(false);

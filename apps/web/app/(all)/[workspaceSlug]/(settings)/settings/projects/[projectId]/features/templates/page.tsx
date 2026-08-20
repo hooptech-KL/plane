@@ -14,7 +14,6 @@ import { PageHead } from "@/components/core/page-title";
 import { SettingsContentWrapper } from "@/components/settings/content-wrapper";
 import { SettingsHeading } from "@/components/settings/heading";
 import { ProjectSettingsFeatureControlItem } from "@/components/settings/project/content/feature-control-item";
-import { WorkItemTemplateSettingsRoot } from "@/components/work-item-templates";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -57,11 +56,6 @@ function FeaturesTemplatesSettingsPage({ params }: Route.ComponentProps) {
             workspaceSlug={workspaceSlug}
           />
         </div>
-        {currentProjectDetails?.work_item_template_view && (
-          <div className="mt-7">
-            <WorkItemTemplateSettingsRoot workspaceSlug={workspaceSlug} projectId={projectId} />
-          </div>
-        )}
       </section>
     </SettingsContentWrapper>
   );

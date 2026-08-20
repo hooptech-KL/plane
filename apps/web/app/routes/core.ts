@@ -186,6 +186,14 @@ export const coreRoutes: RouteConfigEntry[] = [
             ),
           ]),
 
+          // Work item templates
+          layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/templates/layout.tsx", [
+            route(
+              ":workspaceSlug/projects/:projectId/templates",
+              "./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/templates/page.tsx"
+            ),
+          ]),
+
           // Views List
           layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/views/(list)/layout.tsx", [
             route(

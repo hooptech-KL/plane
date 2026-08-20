@@ -7,7 +7,7 @@
 import { useMemo, useCallback } from "react";
 // plane imports
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { CycleIcon, IntakeIcon, ModuleIcon, PageIcon, ViewsIcon, WorkItemsIcon } from "@plane/propel/icons";
+import { CopyIcon, CycleIcon, IntakeIcon, ModuleIcon, PageIcon, ViewsIcon, WorkItemsIcon } from "@plane/propel/icons";
 import type { EUserProjectRoles, IPartialProject } from "@plane/types";
 import type { TNavigationItem } from "@/components/navigation/tab-navigation-root";
 
@@ -31,7 +31,7 @@ export const useNavigationItems = ({
 }: UseNavigationItemsProps): TNavigationItem[] => {
   // Base navigation items
   const baseNavigation = useCallback(
-    (workspaceSlug: string, projectId: string): TNavigationItem[] => [
+    (): TNavigationItem[] => [
       {
         i18n_key: "sidebar.work_items",
         key: "work_items",
@@ -92,13 +92,23 @@ export const useNavigationItems = ({
         shouldRender: !!project?.inbox_view,
         sortOrder: 6,
       },
+      {
+        i18n_key: "sidebar.templates",
+        key: "templates",
+        name: "Templates",
+        href: `/${workspaceSlug}/projects/${projectId}/templates`,
+        icon: CopyIcon,
+        access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
+        shouldRender: !!project?.work_item_template_view,
+        sortOrder: 7,
+      },
     ],
-    [project]
+    [project, workspaceSlug, projectId]
   );
 
   // Combine, filter, and sort navigation items
   const navigationItems = useMemo(() => {
-    const navItems = baseNavigation(workspaceSlug, projectId);
+    const navItems = baseNavigation();
 
     // Filter by permissions and shouldRender
     const filteredItems = navItems.filter((item) => {
@@ -108,8 +118,9 @@ export const useNavigationItems = ({
     });
 
     // Sort by sortOrder
+    // eslint-disable-next-line unicorn/no-array-sort
     return filteredItems.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-  }, [workspaceSlug, projectId, baseNavigation, allowPermissions, project?.id]);
+  }, [workspaceSlug, baseNavigation, allowPermissions, project?.id]);
 
   return navigationItems;
 };
