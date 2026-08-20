@@ -15,8 +15,8 @@ export type TWorkItemTemplate = {
   name: string;
   description: string;
   data: TWorkItemTemplateData;
-  project_id: string;
-  workspace_id: string;
+  project: string;
+  workspace: string;
   created_at: string;
   updated_at: string;
 };

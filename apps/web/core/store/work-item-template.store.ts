@@ -57,7 +57,7 @@ export class WorkItemTemplateStore implements IWorkItemTemplateStore {
   getTemplateById = computedFn((templateId: string) => this.templateMap[templateId]);
 
   getProjectTemplates = computedFn((projectId: string) =>
-    Object.values(this.templateMap).filter((template) => template.project_id === projectId)
+    Object.values(this.templateMap).filter((template) => template.project === projectId)
   );
 
   fetchTemplates = async (workspaceSlug: string, projectId: string) => {

@@ -56,7 +56,7 @@ export const IssueModalProvider = observer(function IssueModalProvider(props: TI
 
       setIsApplyingTemplate(true);
       const { name, description_html, priority, state_id, assignee_ids, label_ids, module_ids } = template.data ?? {};
-      const projectId = template.project_id;
+      const projectId = template.project;
       const data: TWorkItemTemplateData = {
         name,
         description_html,
