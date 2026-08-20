@@ -9,6 +9,7 @@ import { Users, Zap } from "lucide-react";
 // plane imports
 import type { ISvgIcons } from "@plane/propel/icons";
 import {
+  CopyIcon,
   CycleIcon,
   EstimatePropertyIcon,
   IntakeIcon,
@@ -30,6 +31,7 @@ export const PROJECT_SETTINGS_ICONS: Record<TProjectSettingsTabs, LucideIcon | R
   features_views: ViewsIcon,
   features_pages: PageIcon,
   features_intake: IntakeIcon,
+  features_templates: CopyIcon,
   states: StatePropertyIcon,
   labels: LabelPropertyIcon,
   estimates: EstimatePropertyIcon,

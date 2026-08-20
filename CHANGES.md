@@ -7,6 +7,8 @@ a short summary, not a full diff (see git history / linked commits for that).
 All work lands on the `hooptech` branch (renamed from `feat/inline-video-v1`,
 which undersold what's here — inline video was only the first patch).
 
+## Work item templates: per-project toggleable module with pre-filled work item defaults
+
 ## Remove dead build-api-v1.yml CI workflow (pre-CE, unreferenced)
 
 ## Remove dead build-web-v1.yml CI workflow (pre-CE, unreferenced, failing)

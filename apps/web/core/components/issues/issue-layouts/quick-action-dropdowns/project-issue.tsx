@@ -21,6 +21,8 @@ import { useProjectState } from "@/hooks/store/use-project-state";
 import { useUserPermissions } from "@/hooks/store/user";
 // plane-web imports
 import { DuplicateWorkItemModal } from "@/plane-web/components/issues/issue-layouts/quick-action-dropdowns/duplicate-modal";
+// components
+import { WorkItemTemplateFormModal } from "@/components/work-item-templates";
 // helper
 import { ArchiveIssueModal } from "../../archive-issue-modal";
 import { DeleteIssueModal } from "../../delete-issue-modal";
@@ -49,6 +51,7 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
   const [deleteIssueModal, setDeleteIssueModal] = useState(false);
   const [archiveIssueModal, setArchiveIssueModal] = useState(false);
   const [duplicateWorkItemModal, setDuplicateWorkItemModal] = useState(false);
+  const [saveAsTemplateModal, setSaveAsTemplateModal] = useState(false);
   // store hooks
   const { allowPermissions } = useUserPermissions();
   const { issuesFilter } = useIssues(EIssuesStoreType.PROJECT);
@@ -94,6 +97,7 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
     setDeleteIssueModal,
     setArchiveIssueModal,
     setDuplicateWorkItemModal,
+    setSaveAsTemplateModal,
     handleDelete,
     handleUpdate,
     handleArchive,
@@ -139,6 +143,23 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
         }}
         storeType={EIssuesStoreType.PROJECT}
       />
+      {issue.project_id && workspaceSlug && (
+        <WorkItemTemplateFormModal
+          isOpen={saveAsTemplateModal}
+          onClose={() => setSaveAsTemplateModal(false)}
+          workspaceSlug={workspaceSlug.toString()}
+          projectId={issue.project_id}
+          prefilledData={{
+            name: issue.name,
+            description_html: issue.description_html,
+            priority: issue.priority,
+            state_id: issue.state_id,
+            assignee_ids: issue.assignee_ids ?? [],
+            label_ids: issue.label_ids ?? [],
+            module_ids: issue.module_ids ?? [],
+          }}
+        />
+      )}
       {issue.project_id && workspaceSlug && (
         <DuplicateWorkItemModal
           workItemId={issue.id}

@@ -23,6 +23,7 @@ import { useUserPermissions } from "@/hooks/store/user";
 // plane-web components
 import { DuplicateWorkItemModal } from "@/plane-web/components/issues/issue-layouts/quick-action-dropdowns/duplicate-modal";
 // helper
+import { WorkItemTemplateFormModal } from "@/components/work-item-templates";
 import { ArchiveIssueModal } from "../../archive-issue-modal";
 import { DeleteIssueModal } from "../../delete-issue-modal";
 import { CreateUpdateIssueModal } from "../../issue-modal/modal";
@@ -66,6 +67,7 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
   const [deleteIssueModal, setDeleteIssueModal] = useState(false);
   const [archiveIssueModal, setArchiveIssueModal] = useState(false);
   const [duplicateWorkItemModal, setDuplicateWorkItemModal] = useState(false);
+  const [saveAsTemplateModal, setSaveAsTemplateModal] = useState(false);
   // store hooks
   const { allowPermissions } = useUserPermissions();
   const { issuesFilter } = useIssues(EIssuesStoreType.PROJECT);
@@ -141,6 +143,7 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
     setDeleteIssueModal: customDeleteAction,
     setArchiveIssueModal: customArchiveAction,
     setDuplicateWorkItemModal: customDuplicateAction,
+    setSaveAsTemplateModal,
     handleDelete: customDeleteAction,
     handleUpdate,
     handleArchive: customArchiveAction,
@@ -155,23 +158,15 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
     .map((item) => {
       // Customize edit action for work item
       if (item.key === "edit") {
-        return {
-          ...item,
-          shouldRender: isEditingAllowed && !isPeekMode,
-        };
+        return Object.assign({}, item, { shouldRender: isEditingAllowed && !isPeekMode });
       }
       // Customize delete action for work item
       if (item.key === "delete") {
-        return {
-          ...item,
-        };
+        return item;
       }
       // Hide copy link in peek mode
       if (item.key === "copy-link") {
-        return {
-          ...item,
-          shouldRender: !isPeekMode,
-        };
+        return Object.assign({}, item, { shouldRender: !isPeekMode });
       }
       return item;
     })
@@ -234,6 +229,23 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
           }}
           workspaceSlug={workspaceSlug.toString()}
           projectId={issue.project_id}
+        />
+      )}
+      {issue.project_id && workspaceSlug && (
+        <WorkItemTemplateFormModal
+          isOpen={saveAsTemplateModal}
+          onClose={() => setSaveAsTemplateModal(false)}
+          workspaceSlug={workspaceSlug.toString()}
+          projectId={issue.project_id}
+          prefilledData={{
+            name: issue.name,
+            description_html: issue.description_html,
+            priority: issue.priority,
+            state_id: issue.state_id,
+            assignee_ids: issue.assignee_ids ?? [],
+            label_ids: issue.label_ids ?? [],
+            module_ids: issue.module_ids ?? [],
+          }}
         />
       )}
 
