@@ -49,7 +49,7 @@ export const WorkItemTemplateSelect = observer(function WorkItemTemplateSelect(p
     fetchTemplates(workspaceSlug.toString(), projectId);
   }, [isEnabled, projectId, workspaceSlug, fetchedMap, fetchTemplates]);
 
-  if (!isEnabled || templates.length === 0) return <></>;
+  if (!isEnabled) return <></>;
 
   const options = templates.map((template) => ({
     value: template.id,
@@ -75,6 +75,7 @@ export const WorkItemTemplateSelect = observer(function WorkItemTemplateSelect(p
         </span>
       }
       className={dropDownContainerClassName}
+      noResultsMessage={t("work_item_templates.empty_state")}
       noChevron
       disabled={disabled}
     />
