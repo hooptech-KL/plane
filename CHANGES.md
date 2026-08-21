@@ -7,23 +7,21 @@ a short summary, not a full diff (see git history / linked commits for that).
 All work lands on the `hooptech` branch (renamed from `feat/inline-video-v1`,
 which undersold what's here — inline video was only the first patch).
 
-## Link previews: shared work item links unfurl as their identifier instead of the Plane site blurb
+## Shared work item links now show the work item ID, like MBH-1026, instead of a generic Plane description
 
-## Work item templates: per-project toggleable module with pre-filled work item defaults
+## Work item templates: start new work items already filled in with your usual details, turned on per project
 
-Managed from a Templates section under the project (Settings only carries the on/off toggle).
+## Removed an unused build workflow left over from the old setup
 
-## Remove dead build-api-v1.yml CI workflow (pre-CE, unreferenced)
+## Removed another unused build workflow that kept failing
 
-## Remove dead build-web-v1.yml CI workflow (pre-CE, unreferenced, failing)
+## Notifications page: added a back button to return to where you were
 
-## Notifications page: add back button to return to the previous page
+## New notifications now pop up on your desktop when Plane is in a background tab
 
-## Browser notifications: desktop alert for new notifications when tab is backgrounded
+## Fixed the cycle analytics chart never loading
 
-## Cycle analytics: fix trailing-slash 404 in `cycle.service.ts` (analytics widget never loaded)
-
-## Token-authenticated asset endpoints: fix TypeError on every call
+## Fixed file uploads and downloads failing for outside integrations
 
 `apps/api/plane/settings/storage.py` — `S3Storage.__init__()` only accepted
 `request=None`, but `apps/api/plane/api/views/asset.py` (`UserServerAssetEndpoint`,
@@ -35,7 +33,7 @@ asset path until an external integration hit it. Fixed by accepting
 `is_server` (stored, currently unused beyond that — no behavior change from
 the working `request=request` path every other call site already uses).
 
-## Notifications: trailing-slash fix
+## Fixed the notifications list failing to load
 
 `apps/web/core/services/workspace-notification.service.ts` — the notifications
 list call was missing a trailing slash, causing a 500 on every fetch. Added it.
