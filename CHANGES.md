@@ -7,6 +7,8 @@ a short summary, not a full diff (see git history / linked commits for that).
 All work lands on the `hooptech` branch (renamed from `feat/inline-video-v1`,
 which undersold what's here — inline video was only the first patch).
 
+## Link previews: shared work item links unfurl as their identifier instead of the Plane site blurb
+
 ## Work item templates: per-project toggleable module with pre-filled work item defaults
 
 Managed from a Templates section under the project (Settings only carries the on/off toggle).
