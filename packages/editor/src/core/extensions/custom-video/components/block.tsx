@@ -67,13 +67,14 @@ export function CustomVideoBlock(props: CustomVideoBlockProps) {
 
   const updateAttributesSafely = useCallback(
     (attributes: Partial<TCustomVideoAttributes>, errorMessage: string) => {
+      if (!editor.isEditable) return;
       try {
         updateAttributes(attributes);
       } catch (error) {
         console.error(`${errorMessage}:`, error);
       }
     },
-    [updateAttributes]
+    [editor, updateAttributes]
   );
 
   const handleVideoLoad = useCallback(() => {
@@ -97,8 +98,8 @@ export function CustomVideoBlock(props: CustomVideoBlockProps) {
 
     setEditorContainer(closestEditorContainer);
     // derive the aspect ratio from the video's intrinsic dimensions
-    const aspectRatioCalculated =
-      video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : 16 / 9;
+    const rawAspectRatio = video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : 16 / 9;
+    const aspectRatioCalculated = Math.round(rawAspectRatio * 10000) / 10000;
 
     if (nodeWidth === "40%") {
       const editorWidth = closestEditorContainer.clientWidth;
@@ -115,7 +116,7 @@ export function CustomVideoBlock(props: CustomVideoBlockProps) {
         initialComputedSize,
         "Failed to update attributes while initializing a video for the first time:"
       );
-    } else if (!nodeAspectRatio || nodeAspectRatio !== aspectRatioCalculated) {
+    } else if (Number(nodeAspectRatio) !== aspectRatioCalculated) {
       // if the aspect ratio isn't stored (or is stale), update the attrs
       setSize((prevSize) => {
         const newSize = { ...prevSize, aspectRatio: aspectRatioCalculated };

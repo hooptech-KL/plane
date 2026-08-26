@@ -7,6 +7,8 @@ a short summary, not a full diff (see git history / linked commits for that).
 All work lands on the `hooptech` branch (renamed from `feat/inline-video-v1`,
 which undersold what's here — inline video was only the first patch).
 
+## Fixed work items showing a false "updated the description" every time someone opened one containing a video
+
 ## Shared work item links now show the work item ID, like MBH-1026, instead of a generic Plane description
 
 ## Work item templates: start new work items already filled in with your usual details, turned on per project
