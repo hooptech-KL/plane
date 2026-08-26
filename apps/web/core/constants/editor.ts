@@ -29,6 +29,7 @@ import {
   Table,
   TextQuote,
   Underline,
+  Video,
 } from "lucide-react";
 // plane imports
 import type { TCommandExtraProps, TEditorCommands, TEditorFontStyle } from "@plane/editor";
@@ -174,9 +175,19 @@ export const IMAGE_ITEM = {
   extraProps: {},
 } as ToolbarMenuItem<"image">;
 
-const COMPLEX_ITEMS: ToolbarMenuItem<"table" | "image">[] = [
+export const VIDEO_ITEM = {
+  itemKey: "video",
+  renderKey: "video",
+  name: "Video",
+  icon: Video,
+  editors: ["lite", "document"],
+  extraProps: {},
+} as ToolbarMenuItem<"video">;
+
+const COMPLEX_ITEMS: ToolbarMenuItem<"table" | "image" | "video">[] = [
   { itemKey: "table", renderKey: "table", name: "Table", icon: Table, editors: ["document"] },
   IMAGE_ITEM,
+  VIDEO_ITEM,
 ];
 
 export const TOOLBAR_ITEMS: {
