@@ -142,6 +142,9 @@ ATTRIBUTES = {
         "src",
         "width",
         "height",
+        "aspectRatio",
+        "aspectratio",
+        "alignment",
         "status",
     },
     "th": {
