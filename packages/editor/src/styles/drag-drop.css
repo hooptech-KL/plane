@@ -35,7 +35,8 @@
 }
 /* end ai handle */
 
-.ProseMirror:not(.dragging) .ProseMirror-selectednode:not(.node-imageComponent):not(.node-image):not(.table-wrapper) {
+.ProseMirror:not(.dragging)
+  .ProseMirror-selectednode:not(.node-imageComponent):not(.node-videoComponent):not(.node-image):not(.table-wrapper) {
   position: relative;
   cursor: grab;
   outline: none !important;
