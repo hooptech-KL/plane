@@ -7,6 +7,8 @@ a short summary, not a full diff (see git history / linked commits for that).
 All work lands on the `hooptech` branch (renamed from `feat/inline-video-v1`,
 which undersold what's here — inline video was only the first patch).
 
+## Images and videos are no longer highlighted as selected just because you opened a work item
+
 ## Fixed the real cause of phantom "updated the description" entries: the server was deleting a video setting the editor kept rewriting
 
 ## Added a video button to the comment toolbar, so you can attach videos to comments the same way as images

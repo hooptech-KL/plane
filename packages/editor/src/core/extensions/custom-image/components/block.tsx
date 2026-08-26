@@ -235,6 +235,7 @@ export function CustomImageBlock(props: CustomImageBlockProps) {
         "ml-[100%] -translate-x-full": nodeAlignment === "right",
       })}
     >
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
       <div
         ref={containerRef}
         className="group/image-component relative inline-block max-w-full"
@@ -319,7 +320,7 @@ export function CustomImageBlock(props: CustomImageBlockProps) {
             src={resolvedImageSrc}
           />
         )}
-        {selected && displayedImageSrc === resolvedImageSrc && (
+        {selected && editor.isFocused && displayedImageSrc === resolvedImageSrc && (
           <div className="pointer-events-none absolute inset-0 size-full bg-accent-primary/30" />
         )}
         {showImageResizer && (
@@ -333,6 +334,7 @@ export function CustomImageBlock(props: CustomImageBlockProps) {
                 }
               )}
             />
+            {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
             <div
               className={cn(
                 "absolute bottom-0 size-4 translate-y-1/2 rounded-full border-2 border-white bg-accent-primary transition-opacity duration-100 ease-in-out",

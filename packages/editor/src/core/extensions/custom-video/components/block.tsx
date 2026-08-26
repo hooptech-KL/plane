@@ -297,7 +297,7 @@ export function CustomVideoBlock(props: CustomVideoBlockProps) {
             src={resolvedVideoSrc}
           />
         )}
-        {selected && displayedVideoSrc === resolvedVideoSrc && (
+        {selected && editor.isFocused && displayedVideoSrc === resolvedVideoSrc && (
           <div className="pointer-events-none absolute inset-0 size-full rounded-md bg-accent-primary/30" />
         )}
         {showVideoResizer && (
