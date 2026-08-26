@@ -12,10 +12,9 @@ import { CopyIcon } from "@plane/propel/icons";
 import { Breadcrumbs, Header } from "@plane/ui";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
+import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-// plane web imports
-import { CommonProjectBreadcrumbs } from "@/plane-web/components/breadcrumbs/common";
 
 export const ProjectTemplatesHeader = observer(function ProjectTemplatesHeader() {
   const { workspaceSlug, projectId } = useParams();

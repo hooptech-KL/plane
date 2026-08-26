@@ -7,6 +7,8 @@ a short summary, not a full diff (see git history / linked commits for that).
 All work lands on the `hooptech` branch (renamed from `feat/inline-video-v1`,
 which undersold what's here — inline video was only the first patch).
 
+## Updated to the latest Plane community release (v1.4.2), keeping all our own features
+
 ## Videos are no longer highlighted as selected when you open a work item, matching how images already behaved
 
 ## Fixed the real cause of phantom "updated the description" entries: the server was deleting a video setting the editor kept rewriting

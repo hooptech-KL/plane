@@ -96,7 +96,9 @@ export function CustomVideoUploader(props: CustomVideoUploaderProps) {
           maxFileSize,
           onError: (error: EFileError, message: string) => {
             setUploadError(
-              error === EFileError.FILE_SIZE_TOO_LARGE && maxSizeLabel ? `Video too large (max ${maxSizeLabel})` : message
+              error === EFileError.FILE_SIZE_TOO_LARGE && maxSizeLabel
+                ? `Video too large (max ${maxSizeLabel})`
+                : message
             );
           },
         })

@@ -13,9 +13,8 @@ import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import type { EIssuesStoreType, TIssue } from "@plane/types";
 import type { TContextMenuItem } from "@plane/ui";
 import { copyUrlToClipboard, generateWorkItemLink } from "@plane/utils";
-// types
 import { useProject } from "@/hooks/store/use-project";
-import { createCopyMenuWithDuplication } from "@/plane-web/components/issues/issue-layouts/quick-action-dropdowns";
+import { createCopyMenuWithDuplication } from "./copy-menu-helper";
 
 // Generic helper function to handle optional function calls gracefully
 // Overload for functions without parameters
@@ -115,6 +114,7 @@ export const useIssueActionHandlers = (props: MenuItemFactoryProps) => {
       return;
     }
     await handleRestore()
+      // oxlint-disable-next-line promise/always-return
       .then(() => {
         setToast({
           type: TOAST_TYPE.SUCCESS,
