@@ -10,6 +10,8 @@ import { useWorkspaceNotifications } from "@/hooks/store/notifications";
 
 const POLL_INTERVAL = 30000;
 
+const isSupported = () => typeof window !== "undefined" && "Notification" in window;
+
 const showNotification = (body: string) => {
   const notification = new Notification("Plane", { body });
   notification.addEventListener("click", () => window.focus());
@@ -28,23 +30,20 @@ const useBrowserNotifications = () => {
   }, [workspaceSlug, getUnreadNotificationsCount]);
 
   useEffect(() => {
+    if (!isSupported() || Notification.permission !== "default") return;
+
+    const request = () => void Notification.requestPermission();
+    window.addEventListener("pointerdown", request, { once: true });
+    return () => window.removeEventListener("pointerdown", request);
+  }, []);
+
+  useEffect(() => {
     const count = unreadNotificationsCount.total_unread_notifications_count;
 
-    const notify = async () => {
-      if (typeof window === "undefined" || !("Notification" in window)) return;
-      if (count <= previousCount.current || !document.hidden) return;
+    if (isSupported() && count > previousCount.current && Notification.permission === "granted") {
+      showNotification(count === 1 ? "You have 1 unread notification" : `You have ${count} unread notifications`);
+    }
 
-      const body = count === 1 ? "You have 1 unread notification" : `You have ${count} unread notifications`;
-
-      if (Notification.permission === "granted") {
-        showNotification(body);
-      } else if (Notification.permission === "default") {
-        const permission = await Notification.requestPermission();
-        if (permission === "granted") showNotification(body);
-      }
-    };
-
-    notify();
     previousCount.current = count;
   }, [unreadNotificationsCount.total_unread_notifications_count]);
 };
