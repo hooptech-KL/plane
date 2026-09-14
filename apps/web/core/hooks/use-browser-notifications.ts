@@ -6,7 +6,10 @@
 
 import { useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
+import { TOAST_TYPE, setToast } from "@plane/propel/toast";
+import type { TNotification } from "@plane/types";
 import { useWorkspaceNotifications } from "@/hooks/store/notifications";
+import workspaceNotificationService from "@/services/workspace-notification.service";
 
 const POLL_INTERVAL = 30000;
 const DEBUG_KEY = "plane:notify-debug";
@@ -26,14 +29,23 @@ const debug = (...args: unknown[]) => {
   if (isDebugEnabled()) console.log("[notify]", ...args);
 };
 
-const showNotification = (body: string) => {
-  try {
-    const notification = new Notification("Plane", { body });
-    notification.addEventListener("click", () => window.focus());
-    debug("notification shown", body);
-  } catch (error) {
-    debug("notification threw", error);
+const describe = (notification: TNotification | undefined, fallbackCount: number) => {
+  if (!notification) {
+    return {
+      heading: "Plane",
+      detail: fallbackCount === 1 ? "You have 1 unread notification" : `You have ${fallbackCount} unread notifications`,
+    };
   }
+
+  const issue = notification.data?.issue;
+  const reference = issue?.identifier && issue?.sequence_id ? `${issue.identifier}-${issue.sequence_id}` : undefined;
+  const detail =
+    notification.title?.trim() || (notification.is_mentioned_notification ? "mentioned you" : "new activity");
+
+  return {
+    heading: [reference, issue?.name].filter(Boolean).join(" ") || "Plane",
+    detail,
+  };
 };
 
 const useBrowserNotifications = () => {
@@ -43,15 +55,6 @@ const useBrowserNotifications = () => {
     unreadNotificationsCount.total_unread_notifications_count +
     unreadNotificationsCount.mention_unread_notifications_count;
   const previousCount = useRef(totalUnread);
-
-  useEffect(() => {
-    debug("mounted", {
-      workspaceSlug,
-      supported: isSupported(),
-      permission: isSupported() ? Notification.permission : "n/a",
-      initialCount: previousCount.current,
-    });
-  }, [workspaceSlug]);
 
   useEffect(() => {
     if (!workspaceSlug) return;
@@ -81,18 +84,41 @@ const useBrowserNotifications = () => {
   }, []);
 
   useEffect(() => {
-    const permission = isSupported() ? Notification.permission : "n/a";
-
-    debug("count changed", { count: totalUnread, previous: previousCount.current, permission });
-
-    if (isSupported() && totalUnread > previousCount.current && Notification.permission === "granted") {
-      showNotification(
-        totalUnread === 1 ? "You have 1 unread notification" : `You have ${totalUnread} unread notifications`
-      );
-    }
-
+    const increased = totalUnread > previousCount.current;
+    debug("count changed", { count: totalUnread, previous: previousCount.current, increased });
     previousCount.current = totalUnread;
-  }, [totalUnread]);
+
+    if (!increased || !workspaceSlug) return;
+
+    const announce = async () => {
+      let latest: TNotification | undefined;
+      try {
+        const page = await workspaceNotificationService.fetchNotifications(workspaceSlug.toString(), {
+          read: false,
+          per_page: 1,
+        });
+        latest = page?.results?.[0];
+      } catch (error) {
+        debug("could not fetch latest notification", error);
+      }
+
+      const { heading, detail } = describe(latest, totalUnread);
+      debug("announcing", heading, detail);
+
+      setToast({ type: TOAST_TYPE.INFO, title: heading, message: detail });
+
+      if (isSupported() && Notification.permission === "granted") {
+        try {
+          const notification = new Notification(heading, { body: detail });
+          notification.addEventListener("click", () => window.focus());
+        } catch (error) {
+          debug("notification threw", error);
+        }
+      }
+    };
+
+    void announce();
+  }, [totalUnread, workspaceSlug]);
 };
 
 export default useBrowserNotifications;

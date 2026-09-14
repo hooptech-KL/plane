@@ -7,6 +7,8 @@ a short summary, not a full diff (see git history / linked commits for that).
 All work lands on the `hooptech` branch (renamed from `feat/inline-video-v1`,
 which undersold what's here — inline video was only the first patch).
 
+## New notifications now also show an in-app popup naming the work item, so you see it without relying on Mac notification settings
+
 ## Desktop notifications now also fire when someone mentions you, which was the most common case and never worked
 
 ## Desktop notifications now pop up even while you are looking at Plane, and Chrome will finally ask for permission
