@@ -39,7 +39,10 @@ const showNotification = (body: string) => {
 const useBrowserNotifications = () => {
   const { workspaceSlug } = useParams();
   const { unreadNotificationsCount, getUnreadNotificationsCount } = useWorkspaceNotifications();
-  const previousCount = useRef(unreadNotificationsCount.total_unread_notifications_count);
+  const totalUnread =
+    unreadNotificationsCount.total_unread_notifications_count +
+    unreadNotificationsCount.mention_unread_notifications_count;
+  const previousCount = useRef(totalUnread);
 
   useEffect(() => {
     debug("mounted", {
@@ -55,7 +58,14 @@ const useBrowserNotifications = () => {
 
     const poll = () =>
       getUnreadNotificationsCount(workspaceSlug.toString())
-        .then((result) => debug("polled", result?.total_unread_notifications_count))
+        .then((result) =>
+          debug(
+            "polled",
+            result?.total_unread_notifications_count,
+            "mentions",
+            result?.mention_unread_notifications_count
+          )
+        )
         .catch((error: unknown) => debug("poll failed", error));
 
     const interval = setInterval(poll, POLL_INTERVAL);
@@ -71,17 +81,18 @@ const useBrowserNotifications = () => {
   }, []);
 
   useEffect(() => {
-    const count = unreadNotificationsCount.total_unread_notifications_count;
     const permission = isSupported() ? Notification.permission : "n/a";
 
-    debug("count changed", { count, previous: previousCount.current, permission });
+    debug("count changed", { count: totalUnread, previous: previousCount.current, permission });
 
-    if (isSupported() && count > previousCount.current && Notification.permission === "granted") {
-      showNotification(count === 1 ? "You have 1 unread notification" : `You have ${count} unread notifications`);
+    if (isSupported() && totalUnread > previousCount.current && Notification.permission === "granted") {
+      showNotification(
+        totalUnread === 1 ? "You have 1 unread notification" : `You have ${totalUnread} unread notifications`
+      );
     }
 
-    previousCount.current = count;
-  }, [unreadNotificationsCount.total_unread_notifications_count]);
+    previousCount.current = totalUnread;
+  }, [totalUnread]);
 };
 
 export default useBrowserNotifications;
