@@ -39,8 +39,9 @@ const describe = (notification: TNotification | undefined, fallbackCount: number
 
   const issue = notification.data?.issue;
   const reference = issue?.identifier && issue?.sequence_id ? `${issue.identifier}-${issue.sequence_id}` : undefined;
-  const detail =
-    notification.title?.trim() || (notification.is_mentioned_notification ? "mentioned you" : "new activity");
+  const isMention =
+    notification.is_mentioned_notification || !!notification.sender?.toLowerCase().includes("mentioned");
+  const detail = notification.title?.trim() || (isMention ? "mentioned you" : "new activity");
 
   return {
     heading: [reference, issue?.name].filter(Boolean).join(" ") || "Plane",
@@ -93,11 +94,15 @@ const useBrowserNotifications = () => {
     const announce = async () => {
       let latest: TNotification | undefined;
       try {
-        const page = await workspaceNotificationService.fetchNotifications(workspaceSlug.toString(), {
-          read: false,
-          per_page: 1,
-        });
-        latest = page?.results?.[0];
+        const slug = workspaceSlug.toString();
+        const [regular, mentions] = await Promise.all([
+          workspaceNotificationService.fetchNotifications(slug, { read: false, per_page: 1 }),
+          workspaceNotificationService.fetchNotifications(slug, { read: false, per_page: 1, mentioned: true }),
+        ]);
+        // eslint-disable-next-line unicorn/no-array-sort
+        latest = [...(regular?.results ?? []), ...(mentions?.results ?? [])].sort((a, b) =>
+          (b.created_at ?? "").localeCompare(a.created_at ?? "")
+        )[0];
       } catch (error) {
         debug("could not fetch latest notification", error);
       }
