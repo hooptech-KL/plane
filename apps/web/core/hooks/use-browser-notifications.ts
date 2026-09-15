@@ -13,6 +13,7 @@ import workspaceNotificationService from "@/services/workspace-notification.serv
 
 const POLL_INTERVAL = 30000;
 const DEBUG_KEY = "plane:notify-debug";
+const LATEST_PAGE = { per_page: 1, cursor: "1:0:0" };
 
 const isSupported = () => typeof window !== "undefined" && "Notification" in window;
 
@@ -96,13 +97,14 @@ const useBrowserNotifications = () => {
       try {
         const slug = workspaceSlug.toString();
         const [regular, mentions] = await Promise.all([
-          workspaceNotificationService.fetchNotifications(slug, { read: false, per_page: 1 }),
-          workspaceNotificationService.fetchNotifications(slug, { read: false, per_page: 1, mentioned: true }),
+          workspaceNotificationService.fetchNotifications(slug, { ...LATEST_PAGE, read: false }),
+          workspaceNotificationService.fetchNotifications(slug, { ...LATEST_PAGE, read: false, mentioned: true }),
         ]);
-        // eslint-disable-next-line unicorn/no-array-sort
-        latest = [...(regular?.results ?? []), ...(mentions?.results ?? [])].sort((a, b) =>
-          (b.created_at ?? "").localeCompare(a.created_at ?? "")
-        )[0];
+        debug("fetched", { regular: regular?.results?.length, mentions: mentions?.results?.length });
+        latest = [...(regular?.results ?? []), ...(mentions?.results ?? [])].reduce<TNotification | undefined>(
+          (newest, item) => (!newest || (item.created_at ?? "") > (newest.created_at ?? "") ? item : newest),
+          undefined
+        );
       } catch (error) {
         debug("could not fetch latest notification", error);
       }
