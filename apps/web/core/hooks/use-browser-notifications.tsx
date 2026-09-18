@@ -5,9 +5,10 @@
  */
 
 import { useEffect, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import type { TNotification } from "@plane/types";
+import { generateWorkItemLink } from "@plane/utils";
 import { useWorkspaceNotifications } from "@/hooks/store/notifications";
 import workspaceNotificationService from "@/services/workspace-notification.service";
 
@@ -52,6 +53,7 @@ const describe = (notification: TNotification | undefined, fallbackCount: number
 
 const useBrowserNotifications = () => {
   const { workspaceSlug } = useParams();
+  const router = useRouter();
   const { unreadNotificationsCount, getUnreadNotificationsCount } = useWorkspaceNotifications();
   const totalUnread =
     unreadNotificationsCount.total_unread_notifications_count +
@@ -86,16 +88,17 @@ const useBrowserNotifications = () => {
   }, []);
 
   useEffect(() => {
-    const increased = totalUnread > previousCount.current;
-    debug("count changed", { count: totalUnread, previous: previousCount.current, increased });
+    const arrived = totalUnread - previousCount.current;
+    debug("count changed", { count: totalUnread, previous: previousCount.current, arrived });
     previousCount.current = totalUnread;
 
-    if (!increased || !workspaceSlug) return;
+    if (arrived <= 0 || !workspaceSlug) return;
 
     const announce = async () => {
+      const slug = workspaceSlug.toString();
       let latest: TNotification | undefined;
+
       try {
-        const slug = workspaceSlug.toString();
         const [regular, mentions] = await Promise.all([
           workspaceNotificationService.fetchNotifications(slug, { ...LATEST_PAGE, read: false }),
           workspaceNotificationService.fetchNotifications(slug, { ...LATEST_PAGE, read: false, mentioned: true }),
@@ -110,14 +113,45 @@ const useBrowserNotifications = () => {
       }
 
       const { heading, detail } = describe(latest, totalUnread);
-      debug("announcing", heading, detail);
+      const issue = latest?.data?.issue;
+      const workItemLink =
+        issue?.identifier && issue?.sequence_id
+          ? generateWorkItemLink({
+              workspaceSlug: slug,
+              projectId: latest?.project,
+              issueId: issue.id,
+              projectIdentifier: issue.identifier,
+              sequenceId: issue.sequence_id,
+            })
+          : undefined;
 
-      setToast({ type: TOAST_TYPE.INFO, title: heading, message: detail });
+      const opensWorkItem = arrived === 1 && !!workItemLink;
+      const target = opensWorkItem ? workItemLink : `/${slug}/notifications`;
+      debug("announcing", heading, detail, "->", target);
+
+      setToast({
+        type: TOAST_TYPE.INFO,
+        title: heading,
+        message: detail,
+        actionItems: (
+          <button
+            type="button"
+            onClick={() => router.push(target)}
+            className="-ml-2 rounded-sm px-2 py-1 text-11 font-medium text-accent-primary hover:bg-surface-2"
+          >
+            {opensWorkItem ? "View work item" : "View notifications"}
+          </button>
+        ),
+      });
 
       if (isSupported() && Notification.permission === "granted") {
         try {
           const notification = new Notification(heading, { body: detail });
-          notification.addEventListener("click", () => window.focus());
+          notification.addEventListener("click", () => {
+            window.focus();
+            router.push(target);
+            notification.close();
+          });
         } catch (error) {
           debug("notification threw", error);
         }
@@ -125,7 +159,7 @@ const useBrowserNotifications = () => {
     };
 
     void announce();
-  }, [totalUnread, workspaceSlug]);
+  }, [totalUnread, workspaceSlug, router]);
 };
 
 export default useBrowserNotifications;
