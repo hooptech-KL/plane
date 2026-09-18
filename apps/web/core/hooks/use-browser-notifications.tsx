@@ -103,15 +103,7 @@ const useBrowserNotifications = () => {
         type: TOAST_TYPE.INFO,
         title: heading,
         message: detail,
-        actionItems: (
-          <button
-            type="button"
-            onClick={() => router.push(target)}
-            className="-ml-2 rounded-sm px-2 py-1 text-11 font-medium text-accent-primary hover:bg-surface-2"
-          >
-            {opensWorkItem ? "View work item" : "View notifications"}
-          </button>
-        ),
+        onClick: () => router.push(target),
       });
 
       if (!isSupported() || Notification.permission !== "granted") return;

@@ -32,6 +32,7 @@ type SetToastProps =
       title: string;
       message?: string;
       actionItems?: React.ReactNode;
+      onClick?: () => void;
     };
 
 type PromiseToastCallback<ToastData> = (data: ToastData) => string;
@@ -124,6 +125,7 @@ function ToastRender({ id, toast }: { id: React.Key; toast: BaseToast.Root.Toast
       className={cn(
         // Base layout and positioning
         "group flex w-[350px] items-center rounded-lg border shadow-raised-200",
+        toastData.type !== TOAST_TYPE.LOADING && toastData.onClick && "cursor-pointer",
         "absolute right-3 bottom-3 z-[calc(1000-var(--toast-index))]",
         "ease-&lsqb;cubic-bezier(0.22,1,0.36,1)&rsqb; transition-[opacity,transform] duration-500 select-none",
 
@@ -163,9 +165,15 @@ function ToastRender({ id, toast }: { id: React.Key; toast: BaseToast.Root.Toast
         e.stopPropagation();
         e.preventDefault();
       }}
-      onClick={() => close(toast.id)}
+      onClick={() => {
+        if (toastData.type !== TOAST_TYPE.LOADING) toastData.onClick?.();
+        close(toast.id);
+      }}
     >
-      <BaseToast.Close className="absolute top-3 right-3 cursor-pointer text-icon-secondary hover:text-icon-tertiary">
+      <BaseToast.Close
+        className="absolute top-3 right-3 cursor-pointer text-icon-secondary hover:text-icon-tertiary"
+        onClick={(e) => e.stopPropagation()}
+      >
         <CloseIcon strokeWidth={1.5} width={16} height={16} />
       </BaseToast.Close>
       <div className="flex w-full items-start gap-2 p-4">
