@@ -112,6 +112,7 @@ function ToastList() {
 }
 
 function ToastRender({ id, toast }: { id: React.Key; toast: BaseToast.Root.ToastObject }) {
+  const { close } = BaseToast.useToastManager();
   const toastData = toast.data as SetToastProps;
   const type = toastData.type as TOAST_TYPE;
   const data = TOAST_DATA[type];
@@ -162,6 +163,7 @@ function ToastRender({ id, toast }: { id: React.Key; toast: BaseToast.Root.Toast
         e.stopPropagation();
         e.preventDefault();
       }}
+      onClick={() => close(toast.id)}
     >
       <BaseToast.Close className="absolute top-3 right-3 cursor-pointer text-icon-secondary hover:text-icon-tertiary">
         <CloseIcon strokeWidth={1.5} width={16} height={16} />

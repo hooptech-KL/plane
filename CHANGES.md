@@ -7,6 +7,8 @@ a short summary, not a full diff (see git history / linked commits for that).
 All work lands on the `hooptech` branch (renamed from `feat/inline-video-v1`,
 which undersold what's here — inline video was only the first patch).
 
+## Clicking anywhere on a popup message now dismisses it, instead of having to hit the small x
+
 ## Notification popups are now clickable: one new item opens that work item, several open the notifications list
 
 ## New notifications now also show an in-app popup naming the work item, so you see it without relying on Mac notification settings
