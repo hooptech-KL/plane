@@ -13,23 +13,9 @@ import { useWorkspaceNotifications } from "@/hooks/store/notifications";
 import workspaceNotificationService from "@/services/workspace-notification.service";
 
 const POLL_INTERVAL = 30000;
-const DEBUG_KEY = "plane:notify-debug";
 const LATEST_PAGE = { per_page: 1, cursor: "1:0:0" };
 
 const isSupported = () => typeof window !== "undefined" && "Notification" in window;
-
-const isDebugEnabled = () => {
-  try {
-    return typeof window !== "undefined" && !!localStorage.getItem(DEBUG_KEY);
-  } catch {
-    return false;
-  }
-};
-
-const debug = (...args: unknown[]) => {
-  // eslint-disable-next-line no-console
-  if (isDebugEnabled()) console.log("[notify]", ...args);
-};
 
 const describe = (notification: TNotification | undefined, fallbackCount: number) => {
   if (!notification) {
@@ -63,18 +49,7 @@ const useBrowserNotifications = () => {
   useEffect(() => {
     if (!workspaceSlug) return;
 
-    const poll = () =>
-      getUnreadNotificationsCount(workspaceSlug.toString())
-        .then((result) =>
-          debug(
-            "polled",
-            result?.total_unread_notifications_count,
-            "mentions",
-            result?.mention_unread_notifications_count
-          )
-        )
-        .catch((error: unknown) => debug("poll failed", error));
-
+    const poll = () => void getUnreadNotificationsCount(workspaceSlug.toString()).catch(() => undefined);
     const interval = setInterval(poll, POLL_INTERVAL);
     return () => clearInterval(interval);
   }, [workspaceSlug, getUnreadNotificationsCount]);
@@ -82,35 +57,31 @@ const useBrowserNotifications = () => {
   useEffect(() => {
     if (!isSupported() || Notification.permission !== "default") return;
 
-    const request = () => void Notification.requestPermission().then((p) => debug("permission now", p));
+    const request = () => void Notification.requestPermission();
     window.addEventListener("pointerdown", request, { once: true });
     return () => window.removeEventListener("pointerdown", request);
   }, []);
 
   useEffect(() => {
     const arrived = totalUnread - previousCount.current;
-    debug("count changed", { count: totalUnread, previous: previousCount.current, arrived });
     previousCount.current = totalUnread;
 
     if (arrived <= 0 || !workspaceSlug) return;
 
     const announce = async () => {
       const slug = workspaceSlug.toString();
-      let latest: TNotification | undefined;
 
-      try {
-        const [regular, mentions] = await Promise.all([
-          workspaceNotificationService.fetchNotifications(slug, { ...LATEST_PAGE, read: false }),
-          workspaceNotificationService.fetchNotifications(slug, { ...LATEST_PAGE, read: false, mentioned: true }),
-        ]);
-        debug("fetched", { regular: regular?.results?.length, mentions: mentions?.results?.length });
-        latest = [...(regular?.results ?? []), ...(mentions?.results ?? [])].reduce<TNotification | undefined>(
-          (newest, item) => (!newest || (item.created_at ?? "") > (newest.created_at ?? "") ? item : newest),
-          undefined
-        );
-      } catch (error) {
-        debug("could not fetch latest notification", error);
-      }
+      const [regular, mentions] = await Promise.all([
+        workspaceNotificationService.fetchNotifications(slug, { ...LATEST_PAGE, read: false }).catch(() => undefined),
+        workspaceNotificationService
+          .fetchNotifications(slug, { ...LATEST_PAGE, read: false, mentioned: true })
+          .catch(() => undefined),
+      ]);
+
+      const latest = [...(regular?.results ?? []), ...(mentions?.results ?? [])].reduce<TNotification | undefined>(
+        (newest, item) => (!newest || (item.created_at ?? "") > (newest.created_at ?? "") ? item : newest),
+        undefined
+      );
 
       const { heading, detail } = describe(latest, totalUnread);
       const issue = latest?.data?.issue;
@@ -127,7 +98,6 @@ const useBrowserNotifications = () => {
 
       const opensWorkItem = arrived === 1 && !!workItemLink;
       const target = opensWorkItem ? workItemLink : `/${slug}/notifications`;
-      debug("announcing", heading, detail, "->", target);
 
       setToast({
         type: TOAST_TYPE.INFO,
@@ -144,17 +114,17 @@ const useBrowserNotifications = () => {
         ),
       });
 
-      if (isSupported() && Notification.permission === "granted") {
-        try {
-          const notification = new Notification(heading, { body: detail });
-          notification.addEventListener("click", () => {
-            window.focus();
-            router.push(target);
-            notification.close();
-          });
-        } catch (error) {
-          debug("notification threw", error);
-        }
+      if (!isSupported() || Notification.permission !== "granted") return;
+
+      try {
+        const notification = new Notification(heading, { body: detail });
+        notification.addEventListener("click", () => {
+          window.focus();
+          router.push(target);
+          notification.close();
+        });
+      } catch {
+        return;
       }
     };
 
